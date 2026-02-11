@@ -1,0 +1,95 @@
+{
+  "vendor": "TP-Link",
+
+  "routers": [
+    {
+      "model": "TP-Link ER605",
+      "category": "router",
+      "max_users_supported": 50,
+      "coverage_sqft": 2000,
+      "throughput_mbps": 700,
+      "price": 12000
+    },
+    {
+      "model": "TP-Link ER7206",
+      "category": "router",
+      "max_users_supported": 80,
+      "coverage_sqft": 2500,
+      "throughput_mbps": 900,
+      "price": 18000
+    },
+    {
+      "model": "TP-Link ER8411",
+      "category": "router",
+      "max_users_supported": 250,
+      "coverage_sqft": 7000,
+      "throughput_mbps": 2000,
+      "price": 45000
+    }
+  ],
+
+  "switches": [
+    {
+      "model": "TP-Link TL-SG1024",
+      "category": "switch",
+      "ports": 24,
+      "max_devices_supported": 24,
+      "throughput_mbps": 1000,
+      "price": 15000
+    },
+    {
+      "model": "TP-Link TL-SG1048",
+      "category": "switch",
+      "ports": 48,
+      "max_devices_supported": 48,
+      "throughput_mbps": 1000,
+      "price": 30000
+    },
+    {
+      "model": "TP-Link JetStream 48",
+      "category": "switch",
+      "ports": 48,
+      "max_devices_supported": 48,
+      "throughput_mbps": 10000,
+      "price": 55000
+    }
+  ],
+
+  "access_points": [
+    {
+      "model": "TP-Link EAP225",
+      "category": "access_point",
+      "max_users_supported": 40,
+      "coverage_sqft": 1200,
+      "throughput_mbps": 867,
+      "price": 9000
+    },
+    {
+      "model": "TP-Link EAP660 HD",
+      "category": "access_point",
+      "max_users_supported": 100,
+      "coverage_sqft": 2500,
+      "throughput_mbps": 2400,
+      "price": 22000
+    }
+  ],
+
+  "firewalls": [
+    {
+      "model": "TP-Link SafeStream TL-R605",
+      "category": "firewall",
+      "max_users_supported": 150,
+      "throughput_mbps": 600,
+      "price": 14000
+    }
+  ],
+
+  "cables": [
+    {
+      "model": "TP-Link Cat6 Cable",
+      "category": "cable",
+      "max_length_meters": 100,
+      "price": 400
+    }
+  ]
+}

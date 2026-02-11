@@ -1,0 +1,102 @@
+{
+  "vendor": "Cisco",
+
+  "routers": [
+    {
+      "model": "Cisco RV340",
+      "category": "router",
+      "max_users_supported": 100,
+      "coverage_sqft": 3000,
+      "throughput_mbps": 1000,
+      "price": 45000
+    },
+    {
+      "model": "Cisco ISR 4331",
+      "category": "router",
+      "max_users_supported": 300,
+      "coverage_sqft": 8000,
+      "throughput_mbps": 3000,
+      "price": 120000
+    },
+    {
+      "model": "Cisco Catalyst 8300",
+      "category": "router",
+      "max_users_supported": 500,
+      "coverage_sqft": 15000,
+      "throughput_mbps": 5000,
+      "price": 250000
+    }
+  ],
+
+  "switches": [
+    {
+      "model": "Cisco CBS350-24T",
+      "category": "switch",
+      "ports": 24,
+      "max_devices_supported": 24,
+      "throughput_mbps": 1000,
+      "price": 35000
+    },
+    {
+      "model": "Cisco CBS350-48T",
+      "category": "switch",
+      "ports": 48,
+      "max_devices_supported": 48,
+      "throughput_mbps": 1000,
+      "price": 65000
+    },
+    {
+      "model": "Cisco Catalyst 9200",
+      "category": "switch",
+      "ports": 48,
+      "max_devices_supported": 48,
+      "throughput_mbps": 10000,
+      "price": 180000
+    }
+  ],
+
+  "access_points": [
+    {
+      "model": "Cisco Aironet 1832i",
+      "category": "access_point",
+      "max_users_supported": 50,
+      "coverage_sqft": 1500,
+      "throughput_mbps": 1300,
+      "price": 28000
+    },
+    {
+      "model": "Cisco Catalyst 9120",
+      "category": "access_point",
+      "max_users_supported": 100,
+      "coverage_sqft": 2500,
+      "throughput_mbps": 2400,
+      "price": 60000
+    }
+  ],
+
+  "firewalls": [
+    {
+      "model": "Cisco Firepower 1010",
+      "category": "firewall",
+      "max_users_supported": 200,
+      "throughput_mbps": 650,
+      "price": 90000
+    },
+    {
+      "model": "Cisco Firepower 1120",
+      "category": "firewall",
+      "max_users_supported": 400,
+      "throughput_mbps": 1200,
+      "price": 150000
+    }
+  ],
+
+  "cables": [
+    {
+      "model": "Cisco Cat6 Ethernet Cable",
+      "category": "cable",
+      "max_length_meters": 100,
+      "price": 800
+    }
+  ]
+}
