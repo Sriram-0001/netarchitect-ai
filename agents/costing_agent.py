@@ -1,3 +1,4 @@
+
 from utils.catalog_loader import CatalogLoader
 
 
@@ -72,3 +73,69 @@ def run_cost_analysis(infra_package: dict):
             "tplink": 50
         }
     }
+
+import json
+
+
+class CostingAgent:
+
+    def __init__(self, catalog_path="data/vendor_catalog.json"):
+        with open(catalog_path, "r") as f:
+            self.catalog = json.load(f)
+
+    def calculate_vendor_cost(self, infra_package, vendor_key):
+
+        components = infra_package["infrastructure_design"]["components"]
+        selected_models = infra_package["infrastructure_design"]["selected_models"][vendor_key]
+        cloud_servers = infra_package["infrastructure_design"]["cloud_architecture"]["cloud_servers"]
+        dual_isp = infra_package["infrastructure_design"]["redundancy"]["dual_isp"]
+        year3_users = infra_package["scalability_projection"]["year_3_users"]
+
+        vendor_catalog = self.catalog[vendor_key]
+
+        total_cost = 0
+
+        # Router
+        router_model = selected_models["router_model"]
+        router_price = vendor_catalog["routers"][router_model]["price"]
+        total_cost += components["routers"] * router_price
+
+        # Switch
+        switch_model = selected_models["switch_model"]
+        switch_price = vendor_catalog["switches"][switch_model]["price"]
+        total_cost += components["switches"] * switch_price
+
+        # Access Point
+        ap_model = selected_models["access_point_model"]
+        ap_price = vendor_catalog["access_points"][ap_model]["price"]
+        total_cost += components["access_points"] * ap_price
+
+        # Firewall
+        fw_model = selected_models["firewall_model"]
+        fw_price = vendor_catalog["firewalls"][fw_model]["price"]
+        total_cost += components["firewalls"] * fw_price
+
+        # Cloud
+        cloud_price = vendor_catalog["cloud_server_cost"]
+        total_cost += cloud_servers * cloud_price
+
+        # Redundancy
+        if dual_isp:
+            total_cost *= vendor_catalog["redundancy_multiplier"]
+
+        # Scalability
+        if year3_users > 200:
+            total_cost *= 1.15
+
+        return total_cost
+
+    def calculate_cost(self, infra_package):
+        cisco_cost = self.calculate_vendor_cost(infra_package, "cisco")
+        tplink_cost = self.calculate_vendor_cost(infra_package, "tplink")
+
+        return {
+            "cisco_total_cost": round(cisco_cost, 2),
+            "tplink_total_cost": round(tplink_cost, 2),
+            "cost_difference": round(abs(cisco_cost - tplink_cost), 2)
+        }
+

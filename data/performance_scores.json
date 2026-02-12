@@ -1,0 +1,16 @@
+{
+  "VendorA": {
+    "router_basic": 85,
+    "router_enterprise": 95,
+    "switch_24": 88,
+    "firewall": 92,
+    "access_point": 84
+  },
+  "VendorB": {
+    "router_basic": 70,
+    "router_enterprise": 78,
+    "switch_24": 72,
+    "firewall": 75,
+    "access_point": 68
+  }
+}

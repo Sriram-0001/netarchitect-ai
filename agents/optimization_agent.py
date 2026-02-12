@@ -1,3 +1,4 @@
+
 from utils.catalog_loader import CatalogLoader
 
 
@@ -69,3 +70,40 @@ class OptimizationAgent:
         )
 
         return infra_package
+class OptimizationAgent:
+
+    def recommend(self, infra_package, cost_results, performance_scores, risk_scores):
+
+        budget = infra_package["company_profile"]["budget"]
+
+        vendors = infra_package["infrastructure_design"]["selected_models"].keys()
+
+        best_vendor = None
+        best_score = float("inf")
+
+        for vendor in vendors:
+
+            cost = cost_results[f"{vendor}_total_cost"]
+            performance = performance_scores[vendor]
+            risk = risk_scores[vendor]
+
+            composite = cost - (performance * 1000) + (risk * 500)
+
+            if composite < best_score:
+                best_score = composite
+                best_vendor = vendor
+
+        selected_cost = cost_results[f"{best_vendor}_total_cost"]
+
+        if selected_cost > budget:
+            return {
+                "recommended_vendor": best_vendor,
+                "reason": "Exceeds budget. Optimization required.",
+                "optimization_needed": True
+            }
+
+        return {
+            "recommended_vendor": best_vendor,
+            "reason": "Best cost-performance-risk balance within budget.",
+            "optimization_needed": False
+        }

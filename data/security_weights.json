@@ -1,0 +1,7 @@
+{
+  "base_risk": 50,
+  "firewall_present": -15,
+  "redundancy_present": -10,
+  "ids_present": -10,
+  "high_security": -5
+}
