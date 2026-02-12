@@ -1,141 +1,100 @@
-
 from utils.catalog_loader import CatalogLoader
-
-
-def calculate_vendor_cost(vendor_name, infra_package):
-
-    loader = CatalogLoader()
-    catalog = loader.get_vendor_catalog(vendor_name)
-
-    design = infra_package["infrastructure_design"]
-    components = design["components"]
-
-    # Normalize vendor name to match architecture keys
-    normalized_vendor = (
-        vendor_name.lower()
-        .replace("-", "")
-        .replace(" ", "")
-    )
-
-    selected_models = design["selected_models"]
-
-    if normalized_vendor not in selected_models:
-        raise KeyError(
-            f"Vendor '{normalized_vendor}' not found in selected_models.\n"
-            f"Available vendors: {list(selected_models.keys())}"
-        )
-
-    selected = selected_models[normalized_vendor]
-
-    total_cost = 0
-
-    # Router
-    router_model = selected["router_model"]
-    router_data = next(d for d in catalog["routers"] if d["model"] == router_model)
-    total_cost += components["routers"] * router_data["price"]
-
-    # Switch
-    switch_model = selected["switch_model"]
-    switch_data = next(d for d in catalog["switches"] if d["model"] == switch_model)
-    total_cost += components["switches"] * switch_data["price"]
-
-    # Access Point
-    ap_model = selected["access_point_model"]
-    ap_data = next(d for d in catalog["access_points"] if d["model"] == ap_model)
-    total_cost += components["access_points"] * ap_data["price"]
-
-    # Firewall
-    if components["firewalls"] > 0:
-        fw_model = selected["firewall_model"]
-        fw_data = next(d for d in catalog["firewalls"] if d["model"] == fw_model)
-        total_cost += components["firewalls"] * fw_data["price"]
-
-    # Redundancy multiplier
-    if design["redundancy"]["dual_isp"]:
-        total_cost *= 1.1
-
-    return round(total_cost, 2)
-
-
-def run_cost_analysis(infra_package: dict):
-
-    cisco_cost = calculate_vendor_cost("Cisco", infra_package)
-    tplink_cost = calculate_vendor_cost("TP-Link", infra_package)
-
-    return {
-        "cost_analysis": {
-            "cisco_total_cost": cisco_cost,
-            "tplink_total_cost": tplink_cost,
-            "cost_difference": abs(cisco_cost - tplink_cost)
-        },
-        "performance_scores": {
-            "cisco": 60,
-            "tplink": 50
-        }
-    }
-
-import json
 
 
 class CostingAgent:
 
-    def __init__(self, catalog_path="data/vendor_catalog.json"):
-        with open(catalog_path, "r") as f:
-            self.catalog = json.load(f)
+    def __init__(self):
+        self.loader = CatalogLoader()
 
-    def calculate_vendor_cost(self, infra_package, vendor_key):
+    def calculate_vendor_cost(self, vendor, infra_package):
 
-        components = infra_package["infrastructure_design"]["components"]
-        selected_models = infra_package["infrastructure_design"]["selected_models"][vendor_key]
-        cloud_servers = infra_package["infrastructure_design"]["cloud_architecture"]["cloud_servers"]
-        dual_isp = infra_package["infrastructure_design"]["redundancy"]["dual_isp"]
-        year3_users = infra_package["scalability_projection"]["year_3_users"]
+        catalog = self.loader.get_vendor_catalog(vendor)
 
-        vendor_catalog = self.catalog[vendor_key]
+        design = infra_package["infrastructure_design"]
+        components = design["components"]
 
+        normalized_vendor = vendor.lower().replace("-", "").replace(" ", "")
+        selected = design["selected_models"][normalized_vendor]
+
+        breakdown = {}
         total_cost = 0
 
         # Router
-        router_model = selected_models["router_model"]
-        router_price = vendor_catalog["routers"][router_model]["price"]
-        total_cost += components["routers"] * router_price
+        router = next(
+            d for d in catalog["routers"]
+            if d["model"] == selected["router_model"]
+        )
+        router_cost = components["routers"] * router["price"]
+        breakdown["routers"] = {
+            "model": router["model"],
+            "quantity": components["routers"],
+            "unit_price": router["price"],
+            "total": router_cost
+        }
+        total_cost += router_cost
 
         # Switch
-        switch_model = selected_models["switch_model"]
-        switch_price = vendor_catalog["switches"][switch_model]["price"]
-        total_cost += components["switches"] * switch_price
+        switch = next(
+            d for d in catalog["switches"]
+            if d["model"] == selected["switch_model"]
+        )
+        switch_cost = components["switches"] * switch["price"]
+        breakdown["switches"] = {
+            "model": switch["model"],
+            "quantity": components["switches"],
+            "unit_price": switch["price"],
+            "total": switch_cost
+        }
+        total_cost += switch_cost
 
-        # Access Point
-        ap_model = selected_models["access_point_model"]
-        ap_price = vendor_catalog["access_points"][ap_model]["price"]
-        total_cost += components["access_points"] * ap_price
+        # Access Points
+        ap = next(
+            d for d in catalog["access_points"]
+            if d["model"] == selected["access_point_model"]
+        )
+        ap_cost = components["access_points"] * ap["price"]
+        breakdown["access_points"] = {
+            "model": ap["model"],
+            "quantity": components["access_points"],
+            "unit_price": ap["price"],
+            "total": ap_cost
+        }
+        total_cost += ap_cost
 
         # Firewall
-        fw_model = selected_models["firewall_model"]
-        fw_price = vendor_catalog["firewalls"][fw_model]["price"]
-        total_cost += components["firewalls"] * fw_price
+        if components["firewalls"] > 0:
+            fw = next(
+                d for d in catalog["firewalls"]
+                if d["model"] == selected["firewall_model"]
+            )
+            fw_cost = components["firewalls"] * fw["price"]
+            breakdown["firewalls"] = {
+                "model": fw["model"],
+                "quantity": components["firewalls"],
+                "unit_price": fw["price"],
+                "total": fw_cost
+            }
+            total_cost += fw_cost
 
-        # Cloud
-        cloud_price = vendor_catalog["cloud_server_cost"]
-        total_cost += cloud_servers * cloud_price
+        if design["redundancy"]["dual_isp"]:
+            total_cost *= 1.1
 
-        # Redundancy
-        if dual_isp:
-            total_cost *= vendor_catalog["redundancy_multiplier"]
-
-        # Scalability
-        if year3_users > 200:
-            total_cost *= 1.15
-
-        return total_cost
+        return round(total_cost, 2), breakdown
 
     def calculate_cost(self, infra_package):
-        cisco_cost = self.calculate_vendor_cost(infra_package, "cisco")
-        tplink_cost = self.calculate_vendor_cost(infra_package, "tplink")
+
+        cisco_total, cisco_breakdown = self.calculate_vendor_cost(
+            "Cisco", infra_package
+        )
+
+        tplink_total, tplink_breakdown = self.calculate_vendor_cost(
+            "TP-Link", infra_package
+        )
 
         return {
-            "cisco_total_cost": round(cisco_cost, 2),
-            "tplink_total_cost": round(tplink_cost, 2),
-            "cost_difference": round(abs(cisco_cost - tplink_cost), 2)
+            "cisco_total_cost": cisco_total,
+            "tplink_total_cost": tplink_total,
+            "cost_difference": abs(cisco_total - tplink_total),
+            "cisco_breakdown": cisco_breakdown,
+            "tplink_breakdown": tplink_breakdown
         }
-

@@ -1,31 +1,31 @@
 class SecurityAgent:
 
-    def calculate_risk(self, infra_package):
+    def evaluate(self, infra_package):
 
-        infra = infra_package["infrastructure_design"]
-        company = infra_package["company_profile"]
-        results = {}
+        design = infra_package["infrastructure_design"]
+        profile = infra_package["company_profile"]
 
-        for vendor in infra["selected_models"]:
+        risk_score = 50  # base risk
 
-            risk = 50
+        # Firewall reduces risk
+        if design["components"]["firewalls"] > 0:
+            risk_score -= 15
 
-            if company["security_level"] == "High":
-                risk -= 10
-            elif company["security_level"] == "Medium":
-                risk -= 5
+        # IDS reduces risk
+        if design["components"]["ids_systems"] > 0:
+            risk_score -= 10
 
-            if infra["components"]["firewalls"] > 0:
-                risk -= 10
+        # High security requirement reduces tolerance
+        if profile["security_level"].lower() == "high":
+            risk_score -= 10
 
-            if infra["components"]["ids_systems"] > 0:
-                risk -= 10
+        # Redundancy improves resilience
+        if design["redundancy"]["dual_isp"]:
+            risk_score -= 5
 
-            if vendor == "cisco":
-                risk -= 10
-            else:
-                risk += 5
+        risk_score = max(risk_score, 5)
 
-            results[vendor] = max(0, min(100, risk))
-
-        return results
+        return {
+            "cisco": risk_score,
+            "tplink": risk_score + 5  # assume slightly higher risk
+        }

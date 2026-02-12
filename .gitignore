@@ -1,5 +1,6 @@
 __pycache__/
 *.pyc
-venv/
 .env
-outputs/generated_reports/
+.streamlit/
+*.log
+venv/

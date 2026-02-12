@@ -1,270 +1,348 @@
 import streamlit as st
+import matplotlib.pyplot as plt
 import plotly.graph_objects as go
-from agents.analysis_engine import run_analysis
-from pptx import Presentation
-from gtts import gTTS
-import tempfile
+import time
 import os
-import base64
+from dotenv import load_dotenv
 
-# ---------------------------------------------------------
-# PAGE CONFIG
-# ---------------------------------------------------------
-st.set_page_config(page_title="NetArchitect AI", layout="wide")
+from models.llm_handler import LLMHandler
+from agents.system_pipeline import run_full_pipeline
 
-# ---------------------------------------------------------
-# PREMIUM EXECUTIVE THEME
-# ---------------------------------------------------------
-st.markdown("""
-<style>
-body { background: linear-gradient(135deg,#0f172a,#020617); color:white; }
+# ============================================================
+# INITIALIZATION
+# ============================================================
 
-.kpi-card {
-    background: linear-gradient(145deg,#1e293b,#0f172a);
-    padding:30px;
-    border-radius:20px;
-    text-align:center;
-    box-shadow: 0 20px 60px rgba(0,255,150,0.15);
-    transition: all 0.3s ease;
-}
-.kpi-card:hover {
-    transform: translateY(-8px) scale(1.05);
-    box-shadow: 0 25px 80px rgba(16,185,129,0.4);
-}
+load_dotenv()
 
-.kpi-title { color:#94a3b8; font-size:18px; }
-.kpi-value { font-size:36px; font-weight:800; color:#10b981; }
+API_KEY = os.getenv("GROQ_API_KEY")
+MODEL = "llama-3.1-8b-instant"
 
-.section-title {
-    font-size:28px;
-    font-weight:700;
-    margin-top:40px;
-    margin-bottom:20px;
-    color:#22d3ee;
-}
+llm = LLMHandler(API_KEY, MODEL)
 
-.verdict-box {
-    background: linear-gradient(145deg,#111827,#1e293b);
-    padding:35px;
-    border-radius:20px;
-    border-left: 6px solid #22c55e;
-    box-shadow: 0 20px 60px rgba(0,255,150,0.2);
-}
+st.set_page_config(layout="wide")
 
-.ai-avatar {
-    font-size:60px;
-    text-align:center;
-    animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); opacity:0.8; }
-  50% { transform: scale(1.1); opacity:1; }
-  100% { transform: scale(1); opacity:0.8; }
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ---------------------------------------------------------
+# ============================================================
 # HEADER
-# ---------------------------------------------------------
+# ============================================================
+
 st.title("🚀 NetArchitect AI")
 st.caption("Enterprise Infrastructure Intelligence Platform")
 
-# ---------------------------------------------------------
-# INPUT CONTROLS
-# ---------------------------------------------------------
+st.divider()
+
+# ============================================================
+# INPUT SECTION
+# ============================================================
+
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    employees = st.slider("Employees", 10, 500, 120)
-    routers = st.slider("Routers", 1, 5, 1)
+    employees = st.slider("Employees", 10, 1000, 120)
+    office_size = st.slider("Office Size (sqft)", 1000, 50000, 6000)
 
 with col2:
-    switches = st.slider("Switches", 1, 10, 3)
-    aps = st.slider("Access Points", 1, 10, 4)
+    growth = st.slider("Growth Rate (%)", 0, 50, 10)
+    security = st.selectbox("Security Level", ["Low", "Medium", "High"])
 
 with col3:
-    firewalls = st.slider("Firewalls", 1, 3, 1)
-    ids = st.slider("IDS Systems", 0, 3, 1)
+    deployment = st.selectbox("Deployment Model", ["Cloud", "On-Prem", "Hybrid"])
+    budget = st.slider("Budget (₹)", 100000, 5000000, 700000)
 
-budget = st.slider("Budget", 100000, 2000000, 700000, step=50000)
+st.divider()
 
-cloud_model = st.selectbox("Deployment Model", ["Cloud", "Hybrid", "On-Prem"])
+# ============================================================
+# RUN PIPELINE
+# ============================================================
 
-# ---------------------------------------------------------
-# BUILD INFRA PACKAGE
-# ---------------------------------------------------------
-infra_package = {
-    "company_profile": {
+if st.button("Run Optimization"):
+
+    user_input = {
         "num_employees": employees,
-        "office_size_sqft": 6000,
-        "security_level": "High",
-        "growth_rate_percent": 20,
-        "cloud_preference": cloud_model,
-        "budget": budget
-    },
-    "infrastructure_design": {
-        "topology": "Hybrid",
-        "components": {
-            "routers": routers,
-            "switches": switches,
-            "access_points": aps,
-            "firewalls": firewalls,
-            "ids_systems": ids
-        },
-        "cloud_architecture": {
-            "model": cloud_model,
-            "cloud_servers": 2,
-            "on_prem_servers": 2
-        },
-        "redundancy": {"enabled": True, "dual_isp": True},
-        "selected_models": {
-            "cisco": {
-                "router_model": "Cisco Catalyst 8300",
-                "switch_model": "Cisco Catalyst 9200",
-                "access_point_model": "Cisco Catalyst 9120",
-                "firewall_model": "Cisco Firepower 1120"
-            },
-            "tplink": {
-                "router_model": "TP-Link ER8411",
-                "switch_model": "TP-Link JetStream 48",
-                "access_point_model": "TP-Link EAP660 HD",
-                "firewall_model": "TP-Link SafeStream TL-R605"
-            }
-        }
-    },
-    "scalability_projection": {
-        "year_1_users": 144,
-        "year_2_users": 172,
-        "year_3_users": 207,
-        "upgrade_required": True,
-        "upgrade_reason": "Projected growth"
+        "office_size_sqft": office_size,
+        "security_level": security,
+        "growth_rate_percent": growth,
+        "cloud_preference": deployment,
+        "budget": budget,
     }
-}
 
-# ---------------------------------------------------------
-# OPTIMIZATION BUTTON
-# ---------------------------------------------------------
-if st.button("🚀 Run Optimization"):
+    result = run_full_pipeline(user_input, llm)
 
-    result = run_analysis(infra_package)
+    # ========================================================
+    # TOP METRICS SECTION
+    # ========================================================
 
-    cost = result["cost_analysis"]
-    performance = result["performance_scores"]
-    risk = result["security_risk_scores"]
-    recommendation = result["optimization_recommendation"]
+    st.subheader("Executive Summary")
 
-    # ---------------------------------------------------------
-    # KPI CARDS
-    # ---------------------------------------------------------
-    colA, colB, colC = st.columns(3)
+    m1, m2, m3 = st.columns(3)
 
-    colA.markdown(f"""
-    <div class="kpi-card">
-        <div class="kpi-title">Recommended Vendor</div>
-        <div class="kpi-value">{recommendation['recommended_vendor'].upper()}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    m1.metric("Cisco Cost", f"₹ {result['cost']['cisco_total_cost']:,}")
+    m2.metric("TP-Link Cost", f"₹ {result['cost']['tplink_total_cost']:,}")
+    m3.metric(
+        "Optimization Needed",
+        result["optimization_decision"]["optimization_needed"],
+    )
 
-    colB.markdown(f"""
-    <div class="kpi-card">
-        <div class="kpi-title">Cost Difference</div>
-        <div class="kpi-value">₹ {cost['cost_difference']:,.0f}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.divider()
 
-    colC.markdown(f"""
-    <div class="kpi-card">
-        <div class="kpi-title">Optimization Required</div>
-        <div class="kpi-value">{recommendation['optimization_needed']}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    # ========================================================
+    # MAIN TABS
+    # ========================================================
 
-    # ---------------------------------------------------------
-    # PERFORMANCE GAUGE
-    # ---------------------------------------------------------
-    st.markdown('<div class="section-title">Performance Gauge</div>', unsafe_allow_html=True)
+    tab1, tab2, tab3, tab4 = st.tabs(
+        [
+            "Vendor Comparison",
+            "Deep Analysis",
+            "Deployment Plan",
+            "AI Insights",
+        ]
+    )
 
-    gauge_fig = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=performance["cisco"],
-        gauge={
-            'axis': {'range': [0,100]},
-            'bar': {'color': "#10b981"},
-            'steps': [
-                {'range': [0,40], 'color': "#ef4444"},
-                {'range': [40,70], 'color': "#f59e0b"},
-                {'range': [70,100], 'color': "#10b981"}
+
+
+
+    # ========================================================
+    # TAB 1 — VENDOR COMPARISON
+    # ========================================================
+
+    with tab1:
+
+        st.subheader("Vendor Comparison Dashboard")
+
+        vendors = ["Cisco", "TP-Link"]
+
+        # ----------------------------------------------------
+        # Compact Static Charts (Side-by-Side)
+        # ----------------------------------------------------
+
+        colA, colB, colC = st.columns(3)
+
+        # Cost Chart
+        with colA:
+            fig_cost, ax_cost = plt.subplots(figsize=(3.5, 2.2), dpi=90)
+            ax_cost.bar(vendors, [
+                result["cost"]["cisco_total_cost"],
+                result["cost"]["tplink_total_cost"]
+            ])
+            ax_cost.set_title("Cost", fontsize=9)
+            ax_cost.tick_params(labelsize=8)
+            plt.tight_layout()
+            st.pyplot(fig_cost, use_container_width=False)
+
+        # Performance Chart
+        with colB:
+            fig_perf, ax_perf = plt.subplots(figsize=(3.5, 2.2), dpi=90)
+            ax_perf.bar(vendors, [
+                result["performance"]["cisco"],
+                result["performance"]["tplink"]
+            ])
+            ax_perf.set_title("Performance", fontsize=9)
+            ax_perf.tick_params(labelsize=8)
+            plt.tight_layout()
+            st.pyplot(fig_perf, use_container_width=False)
+
+        # Risk Chart
+        with colC:
+            fig_risk, ax_risk = plt.subplots(figsize=(3.5, 2.2), dpi=90)
+            ax_risk.bar(vendors, [
+                result["security"]["cisco"],
+                result["security"]["tplink"]
+            ])
+            ax_risk.set_title("Risk", fontsize=9)
+            ax_risk.tick_params(labelsize=8)
+            plt.tight_layout()
+            st.pyplot(fig_risk, use_container_width=False)
+
+        st.divider()
+
+        # ----------------------------------------------------
+        # INTERACTIVE SLIDER VIEW (Carousel)
+        # ----------------------------------------------------
+
+        st.subheader("Interactive Comparison View")
+
+        if "slide_index" not in st.session_state:
+            st.session_state.slide_index = 0
+
+        graph_types = ["Cost", "Performance", "Risk"]
+
+        left, mid, right = st.columns([1, 6, 1])
+
+        with left:
+            if st.button("⬅", key="left_slide"):
+                st.session_state.slide_index = (
+                    st.session_state.slide_index - 1
+                ) % len(graph_types)
+
+        with right:
+            if st.button("➡", key="right_slide"):
+                st.session_state.slide_index = (
+                    st.session_state.slide_index + 1
+                ) % len(graph_types)
+
+        current_graph = graph_types[st.session_state.slide_index]
+
+        fig_slide, ax_slide = plt.subplots(figsize=(4, 2.5), dpi=90)
+
+        if current_graph == "Cost":
+            values = [
+                result["cost"]["cisco_total_cost"],
+                result["cost"]["tplink_total_cost"]
             ]
-        }
-    ))
+            ax_slide.set_ylabel("₹", fontsize=8)
 
-    gauge_fig.update_layout(height=300)
-    st.plotly_chart(gauge_fig, use_container_width=True)
+        elif current_graph == "Performance":
+            values = [
+                result["performance"]["cisco"],
+                result["performance"]["tplink"]
+            ]
+            ax_slide.set_ylabel("Score", fontsize=8)
 
-    # ---------------------------------------------------------
-    # FINAL VERDICT
-    # ---------------------------------------------------------
-    st.markdown('<div class="section-title">Final Decision Verdict</div>', unsafe_allow_html=True)
+        else:
+            values = [
+                result["security"]["cisco"],
+                result["security"]["tplink"]
+            ]
+            ax_slide.set_ylabel("Risk", fontsize=8)
 
-    verdict_text = f"""
-    Recommended Vendor: {recommendation['recommended_vendor'].upper()}
-    Reason: {recommendation['reason']}
-    Budget Status: {'Within Budget' if not recommendation['optimization_needed'] else 'Exceeds Budget - Optimization Suggested'}
+        ax_slide.bar(vendors, values)
+        ax_slide.set_title(current_graph, fontsize=9)
+        ax_slide.tick_params(labelsize=8)
 
-    Cisco Performance: {performance['cisco']}
-    TP-Link Performance: {performance['tplink']}
+        plt.tight_layout()
+        st.pyplot(fig_slide, use_container_width=False)
 
-    Cisco Risk: {risk['cisco']}
-    TP-Link Risk: {risk['tplink']}
-    """
+    # ========================================================
+    # TAB 2 — DEEP ANALYSIS
+    # ========================================================
 
-    st.markdown(f"""
-    <div class="verdict-box">
-    {verdict_text}
-    </div>
-    """, unsafe_allow_html=True)
+    with tab2:
 
-    # ---------------------------------------------------------
-    # AI EXECUTIVE NARRATION
-    # ---------------------------------------------------------
-    st.markdown('<div class="section-title">🤖 AI Executive Briefing</div>', unsafe_allow_html=True)
+        st.subheader("Deep Vendor Analysis")
 
-    st.markdown('<div class="ai-avatar">🤖</div>', unsafe_allow_html=True)
+        vendor_choice = st.selectbox(
+            "Select Vendor",
+            ["Cisco", "TP-Link"]
+        )
 
-    tts = gTTS(verdict_text)
-    audio_path = os.path.join(tempfile.gettempdir(), "ai_voice.mp3")
-    tts.save(audio_path)
+        key = vendor_choice.lower().replace("-", "").replace(" ", "")
 
-    with open(audio_path, "rb") as f:
-        audio_bytes = f.read()
-        b64 = base64.b64encode(audio_bytes).decode()
+        # ----------------------------------------------------
+        # Component Breakdown
+        # ----------------------------------------------------
 
-    audio_html = f"""
-    <audio autoplay>
-    <source src="data:audio/mp3;base64,{b64}" type="audio/mp3">
-    </audio>
-    """
+        st.markdown("### Component Cost Breakdown")
 
-    st.markdown(audio_html, unsafe_allow_html=True)
+        breakdown = result["cost"][f"{key}_breakdown"]
 
-    # ---------------------------------------------------------
-    # PPT EXPORT
-    # ---------------------------------------------------------
-    if st.button("📊 Generate Executive Slide Deck"):
+        st.json(breakdown)
 
-        prs = Presentation()
-        slide = prs.slides.add_slide(prs.slide_layouts[0])
-        slide.shapes.title.text = "NetArchitect AI"
+        # Pie Chart Distribution
+        labels = [item["model"] for item in breakdown.values()]
+        values = [item["total"] for item in breakdown.values()]
 
-        slide2 = prs.slides.add_slide(prs.slide_layouts[1])
-        slide2.shapes.title.text = "Final Recommendation"
-        slide2.placeholders[1].text = verdict_text
+        fig_pie, ax_pie = plt.subplots(figsize=(3.5, 2.5), dpi=90)
+        ax_pie.pie(values, labels=labels, autopct="%1.1f%%")
+        ax_pie.set_title("Cost Distribution", fontsize=9)
 
-        temp_path = os.path.join(tempfile.gettempdir(), "PitchDeck.pptx")
-        prs.save(temp_path)
+        plt.tight_layout()
+        st.pyplot(fig_pie, use_container_width=False)
 
-        with open(temp_path, "rb") as f:
-            st.download_button("Download PPT", f,
-                               file_name="NetArchitect_AI_Pitch.pptx")
+        st.divider()
+
+        # ----------------------------------------------------
+        # Performance + Risk Metrics
+        # ----------------------------------------------------
+
+        colX, colY = st.columns(2)
+
+        colX.metric("Performance Score", result["performance"][key])
+        colY.metric("Risk Score", result["security"][key])
+
+    # ========================================================
+    # TAB 3 — DEPLOYMENT PLAN
+    # ========================================================
+
+    with tab3:
+
+        st.subheader("Deployment Strategy Overview")
+
+        st.json(result["deployment"])
+
+        st.divider()
+
+        st.subheader("Deployment Metrics")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.metric(
+                "Cable Length (m)",
+                result["deployment"]["cable_length_meters"]
+            )
+            st.metric(
+                "Labour Hours",
+                result["deployment"]["estimated_labour_hours"]
+            )
+            st.metric(
+                "Labour Cost",
+                f"₹ {result['deployment']['labour_cost']:,}"
+            )
+
+        with col2:
+            st.metric(
+                "Rack Units",
+                result["deployment"]["rack_units_required"]
+            )
+            st.metric(
+                "Power Estimate (kW)",
+                result["deployment"]["estimated_power_kw"]
+            )
+            st.metric(
+                "Total Project Cost",
+                f"₹ {result['deployment']['total_project_cost_estimate']:,}"
+            )
+
+        st.divider()
+
+        st.subheader("Network Architecture Diagram")
+        st.image(result["diagram"])
+
+    with tab4:
+        st.subheader("Executive AI Insights")
+
+        insights = result["insights"]
+
+        st.markdown("### Executive Summary")
+        st.write(insights["executive_summary"])
+
+        st.markdown("### Cost Analysis Insight")
+        st.write(insights["cost_analysis_insight"])
+
+        st.markdown("### Performance Insight")
+        st.write(insights["performance_insight"])
+
+        st.markdown("### Risk Insight")
+        st.write(insights["risk_insight"])
+
+        st.markdown("### Scalability Outlook")
+        st.write(insights["scalability_insight"])
+
+        st.markdown("### Deployment Intelligence")
+        st.write(insights["deployment_insight"])
+
+        st.markdown("### Final Recommendation")
+        st.success(insights["final_recommendation"])
+
+    # ========================================================
+    # PDF DOWNLOAD SECTION
+    # ========================================================
+
+    st.divider()
+
+    st.subheader("Export Executive Report")
+
+    st.download_button(
+        "Download Full Executive Report (PDF)",
+        result["pdf"],
+        file_name="NetArchitect_Report.pdf"
+    )

@@ -1,50 +1,63 @@
-import json
+from utils.catalog_loader import CatalogLoader
 
 
 class PerformanceAgent:
 
-    def __init__(self, catalog_path="data/vendor_catalog.json"):
-        with open(catalog_path, "r") as f:
-            self.catalog = json.load(f)
+    def __init__(self):
+        self.loader = CatalogLoader()
 
-    def calculate_vendor_performance(self, infra_package, vendor):
+    def evaluate_vendor(self, vendor, infra_package):
 
-        selected_models = infra_package["infrastructure_design"]["selected_models"][vendor]
-        topology = infra_package["infrastructure_design"]["topology"]
-        redundancy = infra_package["infrastructure_design"]["redundancy"]["enabled"]
-        cloud_model = infra_package["infrastructure_design"]["cloud_architecture"]["model"]
+        catalog = self.loader.get_vendor_catalog(vendor)
 
-        vendor_catalog = self.catalog[vendor]
+        design = infra_package["infrastructure_design"]
+        components = design["components"]
 
-        router_model = selected_models["router_model"]
-        switch_model = selected_models["switch_model"]
-        ap_model = selected_models["access_point_model"]
-        firewall_model = selected_models["firewall_model"]
+        normalized_vendor = vendor.lower().replace("-", "").replace(" ", "")
+        selected = design["selected_models"][normalized_vendor]
 
-        router_tp = vendor_catalog["routers"][router_model]["throughput_mbps"]
-        switch_tp = vendor_catalog["switches"][switch_model]["throughput_mbps"]
-        ap_tp = vendor_catalog["access_points"][ap_model]["throughput_mbps"]
-        firewall_tp = vendor_catalog["firewalls"][firewall_model]["throughput_mbps"]
+        score = 0
 
-        base_score = (router_tp + switch_tp + ap_tp + firewall_tp) / 4
+        # Router performance
+        router = next(
+            d for d in catalog["routers"]
+            if d["model"] == selected["router_model"]
+        )
 
-        # Normalize to 100 scale
-        score = min(base_score / 100, 100)
+        throughput = router.get("throughput_mbps", 0)
+        score += throughput * 0.4
 
-        if redundancy:
-            score += 5
+        # Switch performance (use ports if max_devices not present)
+        switch = next(
+            d for d in catalog["switches"]
+            if d["model"] == selected["switch_model"]
+        )
 
-        if topology.lower() == "hybrid":
-            score += 5
+        switch_capacity = (
+            switch.get("max_devices")
+            or switch.get("ports")
+            or 0
+        )
 
-        if cloud_model.lower() == "hybrid":
-            score += 5
+        score += switch_capacity * 0.1
 
-        return min(score, 100)
+        # Access Point performance
+        ap = next(
+            d for d in catalog["access_points"]
+            if d["model"] == selected["access_point_model"]
+        )
 
-    def calculate_performance(self, infra_package):
+        ap_capacity = ap.get("max_devices", 0)
+        score += ap_capacity * 0.05
+
+        # Normalize score
+        score = min(score / 10, 100)
+
+        return round(score, 2)
+
+    def evaluate(self, infra_package):
 
         return {
-            "cisco": round(self.calculate_vendor_performance(infra_package, "cisco"), 2),
-            "tplink": round(self.calculate_vendor_performance(infra_package, "tplink"), 2)
+            "cisco": self.evaluate_vendor("Cisco", infra_package),
+            "tplink": self.evaluate_vendor("TP-Link", infra_package)
         }
